@@ -1,0 +1,38 @@
+/* Shared readable, compact table styling for admin pages. */
+body{font-size:14px;color:#19342a}
+.content{min-width:0}
+.subtle,.panel-sub{font-size:13px;color:#63766b}
+.form-label{font-size:13px;color:#304b3d}
+.form-control,.form-select{font-size:13px}
+.table{width:100%;min-width:0;table-layout:auto}
+.table th,.table td{white-space:normal;overflow-wrap:anywhere;vertical-align:middle}
+.table tbody td{font-size:13px;color:#2d4439}
+.table-responsive{overflow-x:auto;overscroll-behavior-x:contain}
+.table td:last-child{min-width:88px}
+.icon-action{width:36px;height:36px;display:inline-grid;place-items:center;flex:0 0 auto;border:1px solid #d4e2d9;border-radius:8px;background:#fff;color:#176b4b;cursor:pointer;text-decoration:none;vertical-align:middle}
+.icon-action:hover{background:#eaf5ee;border-color:#96c9aa;color:#075d3f}
+.icon-action:focus-visible{outline:3px solid #61ad88;outline-offset:2px}
+.icon-action svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.table .action-cell,.table td:last-child{white-space:normal}
+.table .action-icons{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dt-buttons,.dataTables_wrapper .dataTables_length,.dataTables_wrapper .dataTables_filter{font-size:13px;color:#334c40}
+.setup-grid .table{min-width:0;table-layout:fixed}
+.setup-grid .table .form-control,.setup-grid .table .form-select{min-width:0;width:100%;font-size:12px}
+.setup-add .form-label{font-size:12px}
+.closing-row details>summary{display:inline-flex;align-items:center;min-height:36px;padding:7px 11px;border:1px solid #d4e2d9;border-radius:8px;background:#fff;color:#176b4b;font-size:13px;cursor:pointer;list-style:none}
+.closing-row details>summary::-webkit-details-marker{display:none}
+.closing-row:has(details:not([open])){display:none!important}
+.closing-row:has(details[open]){display:table-row!important}
+.closing-row details[open]{position:fixed;inset:0;z-index:1070;display:flex;justify-content:flex-end;background:rgba(9,32,24,.4)}
+.closing-row details[open]>summary{display:none}
+.closing-row details[open]>form{box-sizing:border-box;width:min(560px,96vw);height:100vh;overflow-y:auto;align-content:flex-start;margin:0;padding:28px 24px;background:#fff;box-shadow:-12px 0 36px rgba(0,0,0,.18);border-radius:12px 0 0 12px}
+.closing-row details[open]>form::before{content:"Close shift";display:block;grid-column:1/-1;margin-bottom:5px;color:#18372d;font-size:21px;font-weight:600}
+.closing-row details[open]>form .form-label{font-size:13px}
+.datatable-action-reason{display:none!important}
+.action-dialog-backdrop{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:18px;background:rgba(10,27,21,.5)}
+.action-dialog{width:min(440px,100%);padding:24px;background:#fff;border:1px solid #dce8df;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+.action-dialog h2{margin:0 0 8px;color:#18372d;font-size:19px}
+.action-dialog p{margin:0 0 16px;color:#62766a;font-size:13px}
+.action-dialog input{width:100%;margin-bottom:18px}
+.action-dialog .dialog-actions{display:flex;justify-content:flex-end;gap:9px}
+@media(max-width:700px){.content{padding-inline:14px}.table th,.table td{padding:9px 7px!important}.closing-row details[open]>form{padding:20px 16px}.subtle,.panel-sub{font-size:12px}}
