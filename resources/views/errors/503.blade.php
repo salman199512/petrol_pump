@@ -1,0 +1,1 @@
+@extends('errors.layout')@section('code','503 · TEMPORARILY UNAVAILABLE')@section('title','We’ll be back shortly')@section('description','The workspace is temporarily unavailable. Please wait a moment, then try again.')@section('icon','◷')

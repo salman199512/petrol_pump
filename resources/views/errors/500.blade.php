@@ -1,0 +1,1 @@
+@extends('errors.layout')@section('code','500 · SERVER ERROR')@section('title','Something went wrong on our side')@section('description','Your data has not been intentionally removed. Please try again in a moment. If this continues, contact your administrator.')@section('icon','↻')

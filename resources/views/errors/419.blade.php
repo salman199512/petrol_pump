@@ -1,0 +1,1 @@
+@extends('errors.layout')@section('code','419 · SESSION EXPIRED')@section('title','Your session has expired')@section('description','For your security, this form is no longer active. Sign in again and resubmit your changes.')@section('icon','◷')

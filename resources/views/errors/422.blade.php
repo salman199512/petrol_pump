@@ -1,0 +1,1 @@
+@extends('errors.layout')@section('code','422 · CHECK YOUR REQUEST')@section('title','We couldn’t process that request')@section('description','Some information may be missing or no longer valid. Go back, review the form, and try again.')@section('icon','!')

@@ -1,0 +1,1 @@
+@extends('errors.layout')@section('code','404 · PAGE NOT FOUND')@section('title','We couldn’t find that page')@section('description','The page may have moved, or the address may be incorrect. Head back to your workspace and try again.')@section('icon','⌕')

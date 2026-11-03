@@ -1,0 +1,1 @@
+@extends('errors.layout')@section('code','403 · ACCESS DENIED')@section('title','You don’t have access to this page')@section('description','Your account does not have permission for this action. If you need access, contact your station administrator.')@section('icon','⊘')
