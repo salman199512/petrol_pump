@@ -27,6 +27,16 @@ Seeded local accounts (change these passwords before deployment):
 
 The seeder creates the Banas CNG Pump station, CNG/Petrol/Diesel fuel types, four CNG nozzles, three shift types, today's CNG rate, and an open operator shift. The seed operator opening readings start at zero; replace them with actual meter readings before use.
 
+### Optional 20 day demo data
+
+To fill the admin screens with clearly labeled training activity, run:
+
+```sh
+php artisan db:seed --class=DemoDataSeeder
+```
+
+This adds or confirms fictional `DEMO` customers, fuel nozzles, daily rates, approved shifts and readings, invoices, receipts, expenses, and audit entries for the last 20 calendar days. It does not overwrite existing station, user, role, or rate values. The action is idempotent and should only be used in a development or demonstration database. Demo transactions affect dashboard totals and reports.
+
 ## Implemented in this project iteration
 
 - Laravel authentication using email or mobile, active-account check, session regeneration, and sign out.

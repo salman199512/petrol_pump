@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/customers/{customer}/receipts', [CustomerController::class, 'receipt'])->name('customers.receipt');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/{report}/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::get('/reports/{report}/excel', [ReportController::class, 'exportExcel'])->name('reports.excel');
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
@@ -67,6 +68,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
     Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
     Route::get('/setup', [SetupController::class, 'index'])->name('setup.index');
+    Route::post('/setup/stations', [SetupController::class, 'storeStation'])->name('setup.stations.store');
     Route::post('/setup/fuels', [SetupController::class, 'storeFuel'])->name('setup.fuels.store');
     Route::put('/setup/fuels/{fuel}', [SetupController::class, 'updateFuel'])->name('setup.fuels.update');
     Route::post('/setup/nozzles', [SetupController::class, 'storeNozzle'])->name('setup.nozzles.store');

@@ -20,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Pagination\Paginator::useBootstrapFive();
         if (\Illuminate\Support\Facades\Schema::hasTable('system_settings')) {
             view()->share('companySettings', DB::table('system_settings')->pluck('value','key'));
         } else {
