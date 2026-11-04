@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+    Options -MultiViews -Indexes
+    RewriteEngine On
+
+    # Let certificate-validation files be served from the domain root.
+    RewriteRule ^\.well-known(?:/|$) - [L]
+
+    # Do not expose dotfiles such as .env or repository metadata.
+    RewriteRule (^|/)\. - [F,L,NC]
+
+    # Keep the standard public URL working, while serving app routes and assets
+    # from public/ when the domain points at the project root.
+    RewriteRule ^public(?:/|$) - [L]
+    RewriteRule ^$ public/index.php [L]
+    RewriteRule ^(.+)$ public/$1 [L]
+</IfModule>

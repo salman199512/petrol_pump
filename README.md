@@ -64,3 +64,9 @@ This adds or confirms fictional `DEMO` customers, fuel nozzles, daily rates, app
 ## Checks
 
 Run `php artisan route:list` to review registered endpoints and `php artisan test` to run the suite after the local PHP/PHPUnit path configuration is working.
+
+## Hosting without `/public` in the URL
+
+For an addon domain or subdomain, the preferred setup is to point its document root directly to this project's `public/` directory. The site then opens at `https://your-domain/login` without a `/public` prefix.
+
+If the hosting panel cannot change the document root, deploy the project root as the document root and include the root `.htaccess` from this repository. Apache `mod_rewrite` and `AllowOverride All` must be enabled. That file internally routes requests through `public/` and denies direct dotfile access. Set `APP_URL` to the domain and clear Laravel's config cache after changing deployment settings. If the domain still shows the web server's 404 page, confirm its document root points to this deployment and that `.htaccess` overrides are enabled; Laravel cannot handle a request Apache does not route to the project.
