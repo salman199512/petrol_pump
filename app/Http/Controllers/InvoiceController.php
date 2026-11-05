@@ -14,18 +14,20 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         abort_unless($request->user()->hasPermission('invoices.view'),403);
-        $invoices=DB::table('invoices')->leftJoin('customers','customers.id','=','invoices.customer_id')->join('stations','stations.id','=','invoices.station_id')->whereIn('invoices.station_id',$this->stationIds($request))->orderByDesc('invoice_date')->select('invoices.*','customers.name as customer_name','stations.name as station_name')->paginate(20);
+        $invoices=DB::table('invoices')->leftJoin('customers','customers.id','=','invoices.customer_id')->join('stations','stations.id','=','invoices.station_id')->whereIn('invoices.station_id',$this->stationIds($request))->orderByDesc('invoice_date')->select('invoices.*','customers.name as customer_name','stations.name as station_name')->paginate(50);
         return view('invoices.index',compact('invoices'));
     }
     public function create(Request $request)
     {
         abort_unless($request->user()->hasPermission('invoices.manage'),403); $ids=$this->stationIds($request);
-        return view('invoices.create',['stations'=>DB::table('stations')->whereIn('id',$ids)->get(),'fuels'=>DB::table('fuel_types')->where('active',true)->get(),'customers'=>DB::table('customers')->whereIn('station_id',$ids)->where('active',true)->get()]);
+        return view('invoices.create',['stations'=>DB::table('stations')->whereIn('id',$ids)->get(),'fuels'=>DB::table('fuel_types')->where('active',true)->whereRaw('LOWER(name) = ?', ['cng'])->get(),'customers'=>DB::table('customers')->whereIn('station_id',$ids)->where('active',true)->get()]);
     }
     public function store(Request $request)
     {
         abort_unless($request->user()->hasPermission('invoices.manage'),403);
         $data=$request->validate(['station_id'=>'required|integer','customer_id'=>'nullable|integer','invoice_date'=>'required|date','vehicle_number'=>'nullable|string|max:30','payment_mode'=>'required|in:Cash,UPI,Bank,Card,Credit','paid_amount'=>'required|numeric|min:0','items'=>'required|array|min:1','items.*.fuel_type_id'=>'required|exists:fuel_types,id','items.*.quantity'=>'required|numeric|gt:0','items.*.rate'=>'required|numeric|min:0','items.*.tax_rate'=>'required|numeric|min:0|max:100']);
+        $cngFuelIds=DB::table('fuel_types')->where('active',true)->whereRaw('LOWER(name) = ?', ['cng'])->pluck('id')->map(fn($id)=>(int)$id)->all();
+        if(!$cngFuelIds||collect($data['items'])->contains(fn($item)=>!in_array((int)$item['fuel_type_id'],$cngFuelIds,true)))throw \Illuminate\Validation\ValidationException::withMessages(['items'=>'Only CNG is currently available for invoices.']);
         abort_unless($this->stationIds($request)->contains((int)$data['station_id']),403);
         if($data['customer_id']) abort_unless(DB::table('customers')->where('id',$data['customer_id'])->where('station_id',$data['station_id'])->exists(),403);
         if($data['payment_mode']==='Credit' && !$data['customer_id']) throw ValidationException::withMessages(['customer_id'=>'Select a customer for credit sales.']);

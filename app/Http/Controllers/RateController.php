@@ -14,10 +14,12 @@ class RateController extends Controller
         abort_unless(!$stationId || $stations->contains('id',$stationId),403);
         $date=$request->date('date')?->toDateString()??now()->toDateString();
         $fuels=FuelType::where('active',true)->orderBy('id')->get();
-        $rates=DB::table('daily_rates')->join('fuel_types','fuel_types.id','=','daily_rates.fuel_type_id')->leftJoin('users as author','author.id','=','daily_rates.updated_by')->where('daily_rates.station_id',$stationId)->orderByDesc('rate_date')->limit(300)->select('daily_rates.*','fuel_types.name as fuel_name','fuel_types.unit','author.name as author')->get();
+        $rateDates=DB::table('daily_rates')->where('station_id',$stationId)->select('rate_date')->distinct()->orderByDesc('rate_date')->paginate(15)->withQueryString();
+        $dateKeys=$rateDates->getCollection()->pluck('rate_date');
+        $rates=DB::table('daily_rates')->join('fuel_types','fuel_types.id','=','daily_rates.fuel_type_id')->leftJoin('users as author','author.id','=','daily_rates.updated_by')->where('daily_rates.station_id',$stationId)->whereIn('daily_rates.rate_date',$dateKeys)->orderByDesc('rate_date')->select('daily_rates.*','fuel_types.name as fuel_name','fuel_types.unit','author.name as author')->get();
         $rateGroups=$rates->groupBy(fn($rate)=>\Illuminate\Support\Carbon::parse($rate->rate_date)->toDateString());
         $currentRates=DB::table('daily_rates')->where('station_id',$stationId)->where('rate_date',$date)->pluck('rate','fuel_type_id');
-        return view('rates.index',compact('stations','stationId','date','rates','rateGroups','fuels','currentRates'));
+        return view('rates.index',compact('stations','stationId','date','rates','rateGroups','rateDates','fuels','currentRates'));
     }
     public function store(Request $request)
     {

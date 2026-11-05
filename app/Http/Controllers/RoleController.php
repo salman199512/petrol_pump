@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 class RoleController extends Controller
 {
     private function authorizeAdmin(Request $request): void { abort_unless($request->user()->role==='Super Admin'||$request->user()->hasPermission('roles.manage'),403); }
-    public function index(Request $request){$this->authorizeAdmin($request);$roles=Role::withCount(['users','permissions'])->orderBy('system','desc')->orderBy('name')->paginate(20);return view('roles.index',compact('roles'));}
+    public function index(Request $request){$this->authorizeAdmin($request);$roles=Role::withCount(['users','permissions'])->orderBy('system','desc')->orderBy('name')->paginate(50);return view('roles.index',compact('roles'));}
     public function create(Request $request){$this->authorizeAdmin($request);$role=new Role(['active'=>true]);$permissions=Permission::orderBy('module')->orderBy('name')->get()->groupBy('module');return view('roles.form',compact('role','permissions'));}
     public function edit(Request $request,Role $role){$this->authorizeAdmin($request);$role->load('permissions');$permissions=Permission::orderBy('module')->orderBy('name')->get()->groupBy('module');return view('roles.form',compact('role','permissions'));}
     public function store(Request $request){$this->authorizeAdmin($request);$data=$this->validateRole($request);$role=DB::transaction(function()use($data){$role=Role::create(['name'=>$data['name'],'slug'=>Str::slug($data['name']).'-'.Str::lower(Str::random(5)),'description'=>$data['description']??null,'system'=>false,'active'=>true]);$role->permissions()->sync($data['permissions']??[]);return $role;});return redirect()->route('roles.index')->with('success',"{$role->name} role created.");}
