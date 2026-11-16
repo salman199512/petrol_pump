@@ -27,7 +27,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/shifts/create', [ShiftController::class, 'create'])->name('shifts.create');
     Route::post('/shifts', [ShiftController::class, 'store'])->name('shifts.store');
+    Route::get('/shifts/day/{date}', [ShiftController::class, 'day'])->name('shifts.day');
     Route::get('/shifts', [ShiftController::class, 'index'])->name('shifts.index');
+    Route::get('/shifts/{shift}/edit', [ShiftController::class, 'edit'])->name('shifts.edit');
+    Route::put('/shifts/{shift}', [ShiftController::class, 'update'])->name('shifts.update');
     Route::post('/shifts/{shift}/close', [ShiftController::class, 'close'])->name('shifts.close');
     Route::post('/shifts/{shift}/decision', [ShiftController::class, 'decision'])->name('shifts.decision');
     Route::delete('/shifts/{shift}', [ShiftController::class, 'void'])->name('shifts.void');

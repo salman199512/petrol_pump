@@ -54,12 +54,58 @@ class ShiftController extends Controller
     public function index(Request $request)
     {
         abort_unless($request->user()->hasPermission('shifts.view'),403);
-        $q=Shift::with(['station','type','operator','readings.nozzle','readings.fuelType'])->latest('shift_date');
-        if($request->user()->role!=='Super Admin') $q->whereIn('station_id',$request->user()->stations()->select('stations.id'));
-        else if($request->integer('station_id')) $q->where('station_id',$request->integer('station_id'));
-        $canAssign=$this->mayManageShifts($request);$assignmentShifts=collect();$assignmentNozzles=collect();$assignmentOperators=collect();
-        if($canAssign){$stationIds=$this->stationsFor($request)->pluck('id');$assignmentShifts=Shift::with(['station','type','operator'])->whereIn('station_id',$stationIds)->where('status','Open')->orderByDesc('shift_date')->orderBy('shift_type_id')->get();$openAssignments=DB::table('shift_readings')->join('shifts','shifts.id','=','shift_readings.shift_id')->whereIn('shifts.station_id',$stationIds)->where('shifts.status','Open')->select('shift_readings.nozzle_id','shifts.id as shift_id','shifts.shift_date')->get();$rateDates=DB::table('daily_rates')->whereIn('station_id',$stationIds)->get(['station_id','fuel_type_id','rate_date']);$lastReadings=DB::table('shift_readings')->join('shifts','shifts.id','=','shift_readings.shift_id')->whereIn('shifts.station_id',$stationIds)->whereNotNull('shift_readings.closing_reading')->orderByDesc('shifts.shift_date')->orderByDesc('shift_readings.id')->get(['shift_readings.nozzle_id','shift_readings.closing_reading'])->unique('nozzle_id')->keyBy('nozzle_id');$assignmentNozzles=Nozzle::with('fuelType')->whereIn('station_id',$stationIds)->where('active',true)->orderBy('station_id')->orderBy('name')->get()->map(function($nozzle)use($openAssignments,$rateDates,$lastReadings){$nozzle->busy_dates=$openAssignments->where('nozzle_id',$nozzle->id)->map(fn($item)=>\Illuminate\Support\Carbon::parse($item->shift_date)->toDateString().':'.$item->shift_id)->join(',');$nozzle->rate_dates=$rateDates->where('station_id',$nozzle->station_id)->where('fuel_type_id',$nozzle->fuel_type_id)->map(fn($item)=>\Illuminate\Support\Carbon::parse($item->rate_date)->toDateString())->join(',');$nozzle->opening_suggestion=$lastReadings->get($nozzle->id)?->closing_reading??'0.000';return $nozzle;});$assignmentOperators=User::where('active',true)->whereHas('roleRecord.permissions',fn($q)=>$q->where('permissions.slug','shifts.close'))->whereHas('stations',fn($q)=>$q->whereIn('stations.id',$stationIds))->with('stations')->orderBy('name')->get();}
-        return view('shifts.index',array_merge(['shifts'=>$q->paginate(50)->withQueryString()],compact('canAssign','assignmentShifts','assignmentNozzles','assignmentOperators')));
+        $stations=$this->stationsFor($request);
+        $stationId=$request->integer('station_id') ?: $stations->first()?->id;
+        abort_unless(!$stationId || $stations->contains('id',$stationId),403);
+        $canManage=$this->mayManageShifts($request);
+        return view('shifts.index',compact('stations','stationId','canManage'));
+    }
+
+    public function day(Request $request,string $date)
+    {
+        abort_unless($request->user()->hasPermission('shifts.view'),403);
+        $parsed=\DateTime::createFromFormat('!Y-m-d',$date);
+        abort_unless($parsed && $parsed->format('Y-m-d')===$date,404);
+        $stations=$this->stationsFor($request);
+        $stationId=$request->integer('station_id') ?: $stations->first()?->id;
+        abort_unless($stationId && $stations->contains('id',$stationId),403);
+        $station=$stations->firstWhere('id',$stationId);
+        $shifts=Shift::with(['type','operator','readings.nozzle','readings.fuelType'])->where('station_id',$stationId)->whereDate('shift_date',$date)->orderBy('shift_type_id')->orderBy('id')->get();
+        abort_if($shifts->isEmpty(),404);
+        $activeShifts=$shifts->where('status','<>','Voided');
+        $readings=$activeShifts->flatMap(fn($shift)=>$shift->readings);
+        $fuelTotals=$readings->groupBy('fuel_type_id')->map(function($items){$fuel=$items->first()->fuelType;return (object)['name'=>$fuel->name,'unit'=>$fuel->unit,'quantity'=>(float)$items->sum('quantity'),'amount'=>(float)$items->sum('amount')];})->values();
+        $dailyTotals=(object)['sales'=>(float)$activeShifts->sum('sales_total'),'cash'=>(float)$activeShifts->sum('cash_collected'),'upi'=>(float)$activeShifts->sum('upi_collected'),'bank'=>(float)$activeShifts->sum('bank_collected'),'card'=>(float)$activeShifts->sum('card_collected'),'credit'=>(float)$activeShifts->sum('credit_sales'),'collected'=>(float)$activeShifts->sum(fn($shift)=>(float)$shift->cash_collected+(float)$shift->upi_collected+(float)$shift->bank_collected+(float)$shift->card_collected+(float)$shift->credit_sales),'short_excess'=>(float)$activeShifts->sum('short_excess')];
+        $canManage=$this->mayManageShifts($request);
+        $canCloseIds=$shifts->filter(fn($shift)=>$shift->status==='Open'&&(($shift->operator_id===$request->user()->id&&$request->user()->hasPermission('shifts.close'))||($canManage&&($request->user()->role==='Super Admin'||$request->user()->stations()->where('stations.id',$shift->station_id)->exists()))))->pluck('id');
+        return view('shifts.day',compact('date','station','stationId','shifts','fuelTotals','dailyTotals','canManage','canCloseIds'));
+    }
+
+    public function edit(Request $request,Shift $shift)
+    {
+        abort_unless($this->mayManageShifts($request)&&($request->user()->role==='Super Admin'||$request->user()->stations()->where('stations.id',$shift->station_id)->exists()),403);
+        abort_unless($shift->status==='Open',422,'Only open shifts can be edited.');
+        $shift->load(['station','type','operator','readings.nozzle','readings.fuelType']);
+        $types=ShiftType::where('station_id',$shift->station_id)->where('active',true)->orderBy('starts_at')->get();
+        $operators=User::where('active',true)->whereHas('roleRecord.permissions',fn($q)=>$q->where('permissions.slug','shifts.close'))->whereHas('stations',fn($q)=>$q->where('stations.id',$shift->station_id))->orderBy('name')->get();
+        return view('shifts.edit',compact('shift','types','operators'));
+    }
+
+    public function update(Request $request,Shift $shift)
+    {
+        abort_unless($this->mayManageShifts($request)&&($request->user()->role==='Super Admin'||$request->user()->stations()->where('stations.id',$shift->station_id)->exists()),403);
+        abort_unless($shift->status==='Open',422,'Only open shifts can be edited.');
+        $data=$request->validate(['shift_type_id'=>'required|integer|exists:shift_types,id','operator_id'=>'required|integer|exists:users,id','shift_date'=>'required|date','readings'=>'required|array','readings.*.opening'=>'required|numeric|min:0|max:999999999.999']);
+        abort_unless(ShiftType::where('id',$data['shift_type_id'])->where('station_id',$shift->station_id)->where('active',true)->exists(),422);
+        abort_unless(User::where('id',$data['operator_id'])->where('active',true)->whereHas('roleRecord.permissions',fn($q)=>$q->where('permissions.slug','shifts.close'))->whereHas('stations',fn($q)=>$q->where('stations.id',$shift->station_id))->exists(),422);
+        $readings=$shift->readings()->get();$readingIds=$readings->pluck('id')->map(fn($id)=>(int)$id)->all();$submittedIds=array_map('intval',array_keys($data['readings']));
+        if(array_diff($readingIds,$submittedIds)||array_diff($submittedIds,$readingIds))throw ValidationException::withMessages(['readings'=>'The nozzle readings changed. Reload this form and try again.']);
+        $nozzleIds=$readings->pluck('nozzle_id');$busy=DB::table('shift_readings')->join('shifts','shifts.id','=','shift_readings.shift_id')->where('shifts.station_id',$shift->station_id)->whereDate('shifts.shift_date',$data['shift_date'])->where('shifts.status','Open')->where('shifts.id','<>',$shift->id)->whereIn('shift_readings.nozzle_id',$nozzleIds)->exists();
+        if($busy)throw ValidationException::withMessages(['shift_date'=>'A selected nozzle already has another open shift on this date.']);
+        $rates=DB::table('daily_rates')->where('station_id',$shift->station_id)->where('rate_date',$data['shift_date'])->whereIn('fuel_type_id',$readings->pluck('fuel_type_id'))->pluck('rate','fuel_type_id');
+        foreach($readings as $reading)if(!$rates->has($reading->fuel_type_id))throw ValidationException::withMessages(['shift_date'=>'Set every assigned fuel rate for this date before editing the shift.']);
+        DB::transaction(function()use($request,$shift,$data,$readings,$rates){$locked=Shift::whereKey($shift->id)->lockForUpdate()->firstOrFail();if($locked->status!=='Open')throw ValidationException::withMessages(['shift'=>'Only open shifts can be edited.']);$locked->update(['shift_type_id'=>$data['shift_type_id'],'operator_id'=>$data['operator_id'],'shift_date'=>$data['shift_date']]);foreach($readings as $reading)$reading->update(['opening_reading'=>$data['readings'][$reading->id]['opening'],'rate'=>$rates[$reading->fuel_type_id]]);DB::table('audit_logs')->insert(['user_id'=>$request->user()->id,'station_id'=>$shift->station_id,'action'=>'shift_updated','entity_type'=>'shift','entity_id'=>$shift->id,'details'=>json_encode(['shift_type_id'=>$data['shift_type_id'],'operator_id'=>$data['operator_id'],'shift_date'=>$data['shift_date']]),'created_at'=>now(),'updated_at'=>now()]);});
+        return redirect()->route('shifts.day',['date'=>$data['shift_date'],'station_id'=>$shift->station_id])->with('success','Open shift updated.');
     }
 
     public function assignNozzle(Request $request, Shift $shift)
