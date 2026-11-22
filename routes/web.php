@@ -31,6 +31,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/shifts', [ShiftController::class, 'index'])->name('shifts.index');
     Route::get('/shifts/{shift}/edit', [ShiftController::class, 'edit'])->name('shifts.edit');
     Route::put('/shifts/{shift}', [ShiftController::class, 'update'])->name('shifts.update');
+    Route::post('/shifts/{shift}/checkpoint', [ShiftController::class, 'checkpoint'])->name('shifts.checkpoint');
+    Route::put('/shifts/{shift}/activity', [ShiftController::class, 'updateActivity'])->name('shifts.activity.update');
+    Route::delete('/shifts/{shift}/activity', [ShiftController::class, 'deleteActivity'])->name('shifts.activity.destroy');
     Route::post('/shifts/{shift}/close', [ShiftController::class, 'close'])->name('shifts.close');
     Route::post('/shifts/{shift}/decision', [ShiftController::class, 'decision'])->name('shifts.decision');
     Route::delete('/shifts/{shift}', [ShiftController::class, 'void'])->name('shifts.void');
